@@ -5,26 +5,53 @@
 #include <omp.h>  // OpenMP
 
 
-// Remove these after you're done debugging
-
-
 /*
 * Author             : Michael Lewis
 * Last Date Modified : 12 / 16 / 2012
 * Email Address      : mjlewis@cims.nyu.edu
-* Filename           : Calculations-Parallel.cpp
+* Filename           : Calculations-Parallel.c
 */
 
-// POSSIBLE ISSUES WITH THIS CODE
+/**********************************************************************
+ * 
+ * Copyright (C) 2012 Michael Lewis
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining 
+ * a copy of this software and associated documentation files (the 
+ * "Software"), to deal in the Software without restriction, including 
+ * without limitation the rights to use, copy, modify, merge, publish, 
+ * distribute, sublicense, and/or sell copies of the Software, and to 
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be 
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+ * SOFTWARE.
+ * 
+ **********************************************************************/
+
+// This algorithm is based on the double Divide and Conquer algorithm: see paper by Taro Konda and Yoshimasa Nakamura
+// KNOWN ISSUES WITH THIS CODE
 // 1) I really hope we never get two equal singular values
-// 2) I really hope z_j never equal 0
+// 2) If the singular values get too close to one another, the numerical accuracy appears to decrease (from like 10^-10 to 10^-5).
+// I believe this to be due to the caolculations of the first and last lines.
+//
 // THIS ASSUMES THE SUB MATRICES WERE K x K + 1 and N - K - 1 x N - K, instead of in the paper, they were K - 1 x K and N - K x N - K + 1
 void SolveSecularEquation_Parallel( int K , int N , double d[] , double z[] , double sigma[] )
 {
   // Find zeros of the secular equation derived from these values of d and z in M
   // N is the size of the vectors d and z
   // d are the values on the diagonal. Note, they are NOT assumed to be sorted yet, but they are assumed to be pseudo sorted,
-  // i.e. d[0] = 0 by assumption, the next K values are sorted in increasing order, and the last N - K - 1 values are also sorted in increasing order
+  // i.e. d[0] = d_sorted[0] = 0 by assumption,
+  //     the next K values are sorted in increasing order, and the last N - K - 1 values are also sorted in increasing order
 
   // The output, an array of length N of singular values, will also be sorted in increasing order. This will be the array sigma.
   // No assumptions are made on the N values in z
@@ -86,7 +113,6 @@ double prev, result, eps, iter, maxiter;
   private(i, j, k, d2, delta, a1, a2_start, a2, a3, gamma, g, gp, bp, hold, gamma_min, g_min, gamma_max, g_max, prev, result, eps, iter, maxiter )
   for(i = 0; i < N; ++i) // for each singular value
   {
-//       double delta, a1, a2_start, a2, a3, gamma, g, gp, bp, hold, gamma_min, g_min, gamma_max, g_max;
 
        for(j = 0; j < N; ++j)
        {
@@ -100,7 +126,7 @@ double prev, result, eps, iter, maxiter;
 
        // Now, the secular equation for sigma_i is f( t ) = 1 + sum_j=1^n c_j / (d2_j - t) = 0 for t = sigma_i^2
        // For now, let's assume i does not equal N - 1 (the last index)
-       // notice we let delta = d2_{i+1}
+       // notice we let delta = d2_{i+1} = d_sorted[i+1]^2 - d_sorted[i]^2
        // we now consider gamma = 1 / t and
        // g( gamma ) = ( gamma - 1 / delta ) f( 1 / gamma )
        // and we want to find the zeros for this function
@@ -114,7 +140,7 @@ double prev, result, eps, iter, maxiter;
        // Furthermore, if we solve this quadratic formula for this particular b( gamma ) = 1 + [ C_i + C_{i+1} ] / delta
        // we obtain a root gamma_0. This tends to get in the ballpark, so we do a Newton's method from here.
 
-       if( c[i] < 1e-20 ) { // this c[i] is getting very small
+       if( c[i] < 1e-20 ) { // this c[i] = z[i]^2 is getting very small
           sigma[i] = sqrt( temp[i] ) + 1e-14;
        } else if( i < N - 1 ) // not working on the last index
        {
@@ -159,7 +185,7 @@ double prev, result, eps, iter, maxiter;
                 } else {
                    gamma = ( - a2 - sqrt( a2*a2 - 4.0 * a1 * a3 ) ) / ( 2.0 * a1 );
                 }
-             } else if( (g > 0.0) && (gamma > 10e24) ) { // gamma is damn near inf => sigma_i near d_i, just stop the search
+             } else if( (g > 0.0) && (gamma > 10e24) ) { // gamma is near inf => sigma_i near d_i, just stop the search
                 prev = result;
                 gp = 0.0;
                 g = 0.0;
@@ -251,7 +277,7 @@ double prev, result, eps, iter, maxiter;
              if( hold < 0.0 )
              {
                 gamma = gamma / 2.0;
-             } else if( (g > 0.0) && (gamma > 10e24) ) { // gamma is damn near inf => sigma_i near d_i, just stop the search
+             } else if( (g > 0.0) && (gamma > 10e24) ) { // gamma is near inf => sigma_i near d_i, just stop the search
                 prev = result;
                 gp = 0.0;
                 g = 0.0;
@@ -293,7 +319,6 @@ double prev, result, eps, iter, maxiter;
 
              gamma = (gamma_min + gamma_max) / 2.0;
  
-//             while ( fabs( gamma_min - gamma_max ) > eps )
              while ( fabs( gamma_min - gamma_max )/(fabs(gamma_min) + fabs(gamma_max)) > eps)
              {
                 g  = 1 - c[i] * gamma;
@@ -331,7 +356,7 @@ void GetTopAndBottomRows_Parallel( int K , int N , double d[] , double sigma[] ,
   double hold_first[ N ]; // This will hold the first_row data, and we'll just modify the first row data in place
   double hold_last[ N ];  // This will hold the last_row data, and we'll just modify the last row data in place
   double z_hat_sign[ N ]; // This will hold the sign (+1 or -1) for the z_hat. This will ensure the result is consistent with the SVD of the matrix M
-  // Technically, the hold vectors will permuted versions of the first and last rows, as it's just easier for the calculations
+  // Technically, the hold vectors will hold permuted versions of the first and last rows, as it's just easier for the calculations
   // parent_needs is a flag = 0, 1, 2, 3.
   //              : 0  = parent doesn't need the first row or the last row (only happens if parent is top level)
   //              : 1  = parent needs the first row as an output
@@ -564,7 +589,6 @@ void GetTopAndBottomRows_Parallel( int K , int N , double d[] , double sigma[] ,
 
 void SolveSmallMatrices_Parallel(int N , double b1[] , double b2[] , double sigma[] , double first_line[] , double last_line[] , double * phi , double * psi , int parent_needs ) {
 // I ASSUME THIS MATRIX IS REAL
-// I WILL ALSO ASSUME THAT NONE OF B1 or B2 EQUAL ZERO
 // N , b1, and be are inputs
 // parent_needs is a flag = 0, 1, 2, 3.
 //              : 0  = parent doesn't need the first row or the last row (only happens if parent is top level)
@@ -598,6 +622,7 @@ void SolveSmallMatrices_Parallel(int N , double b1[] , double b2[] , double sigm
        // e = z_1^2 + z_2^2 + z_3^2 , a = b1^2 + b2^2 , d = b3^2 + b4^2
        // z_0 = (a + d ) / 2 , z_1 = 0 , z_2 = (a - d) / 2 , z_3 = b2 * b3
        // NOTE: we get z_1 = 0, because I'm assuming this matrix is real and NOT complex
+       //       I am using the wikipedia formula for the singular values of a 2 x 2 matrix = sqrt( singular values of BB^T )
        double a = b1[0]*b1[0] + b2[0]*b2[0]; // b1^2 + b2^2
        double d = b1[1]*b1[1] + b2[1]*b2[1]; // b3^2 + b4^2
        double z_0 = (a + d)/2.0;
@@ -612,9 +637,9 @@ void SolveSmallMatrices_Parallel(int N , double b1[] , double b2[] , double sigm
        sigma[0] = sqrt( sqrt( n1 - sqrt( n1*n1 - n2*n2 )));
        sigma[1] = sqrt( sqrt( n1 + sqrt( n1*n1 - n2*n2 )));
 
-       // ASSUMING NONE OF B1 or B2 EQUAL ZERO
        // the vector for the null space v = [ -(b2 / b1) 1 -(b3 / b4) ], properly normalized
        // This goes into the values for phi and psi
+       // Assuming b1 and b4 != 0 of course, otherwise the null space vectors is much simpler
 
        /* b4 = 0 => v = ( 0 0 1 )^T , b1 = 0 => v = ( 1 0 0 )^T , if both = 0, we're screwed */
        phi[0] = ( b2[1] == 0.0 ? 0.0 : ( b1[0] == 0.0 ? 1.0 : -b2[0] / b1[0] ) );
@@ -639,7 +664,7 @@ void SolveSmallMatrices_Parallel(int N , double b1[] , double b2[] , double sigm
 */
 
        double v1, v3;
-       // Similar analysis can be done by finding the null space for A^T A - sigma^2 I
+       // Similar analysis can be done by finding the null space for B^T B - sigma^2 I
        v1   = -b2[0] * b1[0] / ( b1[0]*b1[0] - sigma[0]*sigma[0] ); // -(b2 * b1) / (b1^2 - sig_0^2)
        v3   = -b2[1] * b1[1] / ( b2[1]*b2[1] - sigma[0]*sigma[0] ); // -(b4 * b3) / (b4^2 - sig_0^2)
        norm = sqrt(1 + v1 * v1 + v3 * v3);
@@ -693,7 +718,6 @@ void DivideAndConquer_Parallel( int N , double b1[] , double b2[] , double sigma
     // NOTE: Current level always needs L1 and F2 to make the Z values to get the sigma values
     //       Current level also needs F1 if parent needs front row
     //       Current level also needs L2 if parent needs last row
-    //       STILL NEED TO FULLY IMPLEMENT!!!!!!!!!!!!!!!!!
 
     if( N <= 2 )
     {
@@ -785,8 +809,6 @@ void DivideAndConquer_Parallel( int N , double b1[] , double b2[] , double sigma
         }
 
         /* normalize the output vectors */
-        /* Do I want to do an error check to make sure the norm is close to 1? */
-
         if( parent_needs == 1 || parent_needs == 3 ) // parent needs first row )
         {
            double norm = 0.0;
@@ -822,21 +844,6 @@ void DivideAndConquer_Parallel( int N , double b1[] , double b2[] , double sigma
 
         }
 
-        // free up pointers now
-
-
-
-        // Should these be freed up? They are connected to data that will be used at higher levels
-/*      free(b1_child1);
-        free(b1_child2);
-        free(b2_child1);
-        free(b2_child2);
-        free(scratch_child1);
-        free(scratch_child2);
-        free(sigma_child1);
-        free(sigma_child2);
-        free(first_row_1);
-*/
     }
 
     return;
@@ -853,10 +860,6 @@ void GetSingularValues_Parallel( int N , double b1[] , double b2[] , double sigm
 
     double *scratch = (double *) malloc(sizeof(double) *N);
     if(!scratch) { fprintf(stderr,"in main: failed to allocate scratch\n"); abort();}
-//    double *first_row = (double *) malloc(sizeof(double) *N);
-//    if(!first_row) { fprintf(stderr,"in main: failed to allocate first_row\n"); abort();}
-//    double *last_row = (double *) malloc(sizeof(double) *N);
-//    if(!last_row) { fprintf(stderr,"in main: failed to allocate last_row\n"); abort();}
     double *first_row, *last_row; // these don't need space, because we don't need these values
 
     double phi, psi;
@@ -866,8 +869,6 @@ void GetSingularValues_Parallel( int N , double b1[] , double b2[] , double sigm
 
     // Now free up the memory
     free(scratch);
-//    free(first_row);
-//    free(last_row);
 
     return;
 }
