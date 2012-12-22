@@ -76,12 +76,11 @@ void bidiag_par(int m, int n, double*restrict A, double*restrict alpha, double*r
 	cl_context ctx;
 	cl_command_queue queue;
 		
-	create_context_on("Advanced Micro Devices, Inc.", "Capeverde", 0, &ctx, &queue, 0); 
+	//create_context_on("Advanced Micro Devices, Inc.", "Capeverde", 0, &ctx, &queue, 0); 
 	//create_context_on("Advanced Micro Devices, Inc.", "AMD FX(tm)-4100 Quad-Core Processor", 0, &ctx, &queue, 0); 
-	//	create_context_on("Intel", NULL, 0, &ctx, &queue, 0); 
+		create_context_on("Intel", NULL, 0, &ctx, &queue, 0); 
 	//create_context_on("NVIDIA Corporation", NULL, 0, &ctx, &queue, 0); 
 	// pointer to the text of the kernel file
-
 	char *knl_text;
 
 	// options string for kernel from string, tells the kernel its local dimensions
