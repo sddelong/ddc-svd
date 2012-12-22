@@ -30,3 +30,5 @@ setup:
 
    To compile and run it, follow the example of test-whole-svd.c in terms of the includes, the Makefile, 
    and the function call itself.
+
+Many of the components of the svd computation are stand alone. See additional README files for further info.
