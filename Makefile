@@ -19,3 +19,6 @@ test-whole-svd : test-whole-svd.c matrix_helper.o parallel-twisted.o svd_gpu.o c
 
 %.o : %.c %.h cl-helper.c
 		gcc -c  -std=gnu99 -O3 $< -lm -fopenmp -lOpenCL $(CL_CFLAGS) $(CL_LDFLAGS)
+
+clean:
+	rm -f $(EXECUTABLES) *.o

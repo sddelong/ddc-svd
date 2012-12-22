@@ -9,21 +9,22 @@ static void get_timestamp(timestamp_type *t)
   gettimeofday(t, NULL);
 }
 
-double timestamp_diff_in_seconds(timestamp_type x, timestamp_type y)
+static double timestamp_diff_in_seconds(timestamp_type start,
+timestamp_type end)
 {
-  /* Perform the carry for the later subtraction by updating y. */
-  if (x.tv_usec < y.tv_usec) {
-    int nsec = (y.tv_usec - x.tv_usec) / 1000000 + 1;
-    y.tv_usec -= 1000000 * nsec;
-    y.tv_sec += nsec;
+  /* Perform the carry for the later subtraction by updating start. */
+  if (end.tv_usec < start.tv_usec) {
+    int nsec = (start.tv_usec - end.tv_usec) / 1000000 + 1;
+    start.tv_usec -= 1000000 * nsec;
+    start.tv_sec += nsec;
   }
-  if (x.tv_usec - y.tv_usec > 1000000) {
-    int nsec = (x.tv_usec - y.tv_usec) / 1000000;
-    y.tv_usec += 1000000 * nsec;
-    y.tv_sec -= nsec;
+  if (end.tv_usec - start.tv_usec > 1000000) {
+    int nsec = (end.tv_usec - start.tv_usec) / 1000000;
+    start.tv_usec += 1000000 * nsec;
+    start.tv_sec -= nsec;
   }
 
-  return x.tv_sec + (x.tv_usec - y.tv_usec)*1e-6;
+  return end.tv_sec - start.tv_sec + (end.tv_usec - start.tv_usec)*1e-6;
 }
 
 #else
