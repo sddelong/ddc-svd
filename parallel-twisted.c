@@ -1,3 +1,28 @@
+/**********************************************************************
+ * 
+ * Copyright (C) 2012 Steven Delong
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining 
+ * a copy of this software and associated documentation files (the 
+ * "Software"), to deal in the Software without restriction, including 
+ * without limitation the rights to use, copy, modify, merge, publish, 
+ * distribute, sublicense, and/or sell copies of the Software, and to 
+ * permit persons to whom the Software is furnished to do so, subject to
+ * the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be 
+ * included in all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF 
+ * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
+ * NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS 
+ * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
+ * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+ * SOFTWARE.
+ * 
+**********************************************************************/
 
 /************************************
  *    Description:  Library of routines to find singular vectors given singular values.
@@ -101,6 +126,10 @@ void NormalizeVectors(int n, int m, double* X){
 void CalcGamma(int n,int m, double* A,double* B,double* D1,double* D2,double* sigma,double * out){
     // Function that calculates gamma = D1 + D2  - (A^2 + B^2 - sigma^2).
     // use gpu since all of this is perfectly parallelizeable
+  
+  // This function ran slower on the GPU than in serial, 
+  // and is NOT USED IN THE CURRENT VERSION OF THE CODE.
+
 
     cl_context ctx;
     cl_command_queue queue;
